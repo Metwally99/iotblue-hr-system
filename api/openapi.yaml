@@ -1,0 +1,520 @@
+openapi: 3.1.0
+info:
+  title: HR Management API
+  version: 1.0.0
+  description: Secure employee, department, leave, attendance, and reporting API.
+servers:
+  - url: http://localhost:8080/api/v1
+tags:
+  - name: Authentication
+  - name: Departments
+  - name: Employees
+  - name: Leave
+  - name: Attendance
+paths:
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Authenticate an active employee
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /departments:
+    get:
+      tags: [Departments]
+      summary: List departments
+      responses:
+        '200':
+          description: Department list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Department' }
+    post:
+      tags: [Departments]
+      summary: Create a department
+      description: Administrator only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DepartmentInput' }
+      responses:
+        '201': { $ref: '#/components/responses/DepartmentResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /departments/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ID'
+    get:
+      tags: [Departments]
+      summary: Get a department
+      responses:
+        '200': { $ref: '#/components/responses/DepartmentResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Departments]
+      summary: Rename a department
+      description: Administrator only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DepartmentInput' }
+      responses:
+        '200': { $ref: '#/components/responses/DepartmentResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /employees:
+    get:
+      tags: [Employees]
+      summary: List employees
+      description: Administrator only.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - { name: search, in: query, schema: { type: string } }
+        - { name: department_id, in: query, schema: { type: string, format: uuid } }
+        - { name: role, in: query, schema: { $ref: '#/components/schemas/Role' } }
+        - { name: is_active, in: query, schema: { type: boolean } }
+      responses:
+        '200':
+          description: Paginated employee list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Employee' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Employees]
+      summary: Create an employee and initial yearly leave balance
+      description: Administrator only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateEmployeeRequest' }
+      responses:
+        '201': { $ref: '#/components/responses/EmployeeResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /employees/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ID'
+    get:
+      tags: [Employees]
+      summary: Get an employee
+      description: Administrator only.
+      responses:
+        '200': { $ref: '#/components/responses/EmployeeResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Employees]
+      summary: Update an employee
+      description: Administrator only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateEmployeeRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/EmployeeResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /employees/{id}/deactivate:
+    patch:
+      tags: [Employees]
+      summary: Deactivate an employee
+      description: Administrator only. Historical data is preserved.
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200': { $ref: '#/components/responses/EmployeeResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /leave-requests:
+    post:
+      tags: [Leave]
+      summary: Submit a leave request for the current employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubmitLeaveRequest' }
+      responses:
+        '201': { $ref: '#/components/responses/LeaveResponse' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Leave]
+      summary: List all leave requests
+      description: Administrator only.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - { name: search, in: query, schema: { type: string } }
+        - { name: employee_id, in: query, schema: { type: string, format: uuid } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/LeaveStatus' } }
+        - { name: year, in: query, schema: { type: integer } }
+      responses:
+        '200': { $ref: '#/components/responses/LeaveListResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /leave-requests/{id}:
+    get:
+      tags: [Leave]
+      summary: Get an accessible leave request
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200': { $ref: '#/components/responses/LeaveResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /leave-requests/{id}/approve:
+    post:
+      tags: [Leave]
+      summary: Approve a pending leave request
+      description: Administrator only. Consumes balance transactionally.
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecisionRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/DecisionResponse' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /leave-requests/{id}/reject:
+    post:
+      tags: [Leave]
+      summary: Reject a pending leave request
+      description: Administrator only.
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecisionRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/DecisionResponse' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /employees/{id}/leave-balances:
+    get:
+      tags: [Leave]
+      summary: Get an employee's yearly leave balance
+      description: Authenticated employees may read their own balance; HR and administrators may read any employee balance.
+      parameters:
+        - $ref: '#/components/parameters/ID'
+        - { name: year, in: query, schema: { type: integer } }
+      responses:
+        '200': { $ref: '#/components/responses/BalanceResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /attendance/check-in:
+    post:
+      tags: [Attendance]
+      summary: Check the current employee in using the server clock
+      responses:
+        '201': { $ref: '#/components/responses/AttendanceResponse' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /attendance/check-out:
+    post:
+      tags: [Attendance]
+      summary: Check the current employee out using the server clock
+      responses:
+        '200': { $ref: '#/components/responses/AttendanceResponse' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /attendance:
+    get:
+      tags: [Attendance]
+      summary: List attendance across employees
+      description: Administrator only.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - { name: search, in: query, schema: { type: string } }
+        - { name: employee_id, in: query, schema: { type: string, format: uuid } }
+        - { name: department_id, in: query, schema: { type: string, format: uuid } }
+        - { name: start_date, in: query, schema: { type: string, format: date } }
+        - { name: end_date, in: query, schema: { type: string, format: date } }
+      responses:
+        '200': { $ref: '#/components/responses/AttendanceListResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /attendance/report:
+    get:
+      tags: [Attendance]
+      summary: Aggregate attendance by employee and department
+      description: Administrator only.
+      parameters:
+        - { name: start_date, in: query, required: true, schema: { type: string, format: date } }
+        - { name: end_date, in: query, required: true, schema: { type: string, format: date } }
+        - { name: employee_id, in: query, schema: { type: string, format: uuid } }
+        - { name: department_id, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Aggregated report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/AttendanceReportRow' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ID:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: page_size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+  schemas:
+    Role: { type: string, enum: [admin, hr, manager, employee] }
+    LeaveStatus: { type: string, enum: [pending, approved, rejected] }
+    LeaveType: { type: string, enum: [annual, sick, holiday] }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    LoginResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            access_token: { type: string }
+            token_type: { type: string, const: Bearer }
+            expires_at: { type: string, format: date-time }
+            employee: { $ref: '#/components/schemas/Employee' }
+    Identity:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+    DepartmentInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 100 }
+    Department:
+      allOf:
+        - $ref: '#/components/schemas/DepartmentInput'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    Employee:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        department_id: { type: string, format: uuid }
+        manager_id: { type: [string, 'null'], format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+        is_active: { type: boolean }
+    CreateEmployeeRequest:
+      type: object
+      required: [department_id, name, email, password, role, total_leave_days]
+      properties:
+        department_id: { type: string, format: uuid }
+        manager_id: { type: [string, 'null'], format: uuid }
+        name: { type: string, minLength: 2, maxLength: 150 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8, maxLength: 72 }
+        role: { $ref: '#/components/schemas/Role' }
+        total_leave_days: { type: integer, minimum: 1, maximum: 365 }
+    UpdateEmployeeRequest:
+      type: object
+      properties:
+        department_id: { type: string, format: uuid }
+        manager_id: { type: string, format: uuid }
+        name: { type: string, minLength: 2, maxLength: 150 }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+    SubmitLeaveRequest:
+      type: object
+      required: [start_date, end_date, leave_type]
+      properties:
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date }
+        leave_type: { $ref: '#/components/schemas/LeaveType' }
+    DecisionRequest:
+      type: object
+      properties:
+        review_note: { type: [string, 'null'], maxLength: 500 }
+    LeaveRequest:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        employee_id: { type: string, format: uuid }
+        employee_name: { type: string }
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date }
+        leave_type: { $ref: '#/components/schemas/LeaveType' }
+        status: { $ref: '#/components/schemas/LeaveStatus' }
+        reviewed_by: { type: [string, 'null'], format: uuid }
+        reviewed_at: { type: [string, 'null'], format: date-time }
+        review_note: { type: [string, 'null'] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    LeaveBalance:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        employee_id: { type: string, format: uuid }
+        leave_year: { type: integer }
+        leave_type: { $ref: '#/components/schemas/LeaveType' }
+        total_days: { type: integer }
+        used_days: { type: integer }
+        available_days: { type: integer }
+    AttendanceRecord:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        employee_id: { type: string, format: uuid }
+        employee_name: { type: string }
+        department_id: { type: string, format: uuid }
+        department_name: { type: string }
+        attendance_date: { type: string, format: date }
+        check_in: { type: string, format: date-time }
+        check_out: { type: [string, 'null'], format: date-time }
+    AttendanceReportRow:
+      type: object
+      properties:
+        employee_id: { type: string, format: uuid }
+        employee_name: { type: string }
+        department_id: { type: string, format: uuid }
+        department_name: { type: string }
+        present_days: { type: integer }
+        completed_days: { type: integer }
+        total_hours: { type: number }
+    Pagination:
+      type: object
+      properties:
+        page: { type: integer }
+        page_size: { type: integer }
+        total_items: { type: integer }
+        total_pages: { type: integer }
+    PaginatedResponse:
+      type: object
+      properties:
+        meta: { $ref: '#/components/schemas/Pagination' }
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: {}
+  responses:
+    DepartmentResponse:
+      description: Department
+      content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/Department' } } } } }
+    EmployeeResponse:
+      description: Employee
+      content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/Employee' } } } } }
+    LeaveResponse:
+      description: Leave request
+      content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/LeaveRequest' } } } } }
+    LeaveListResponse:
+      description: Paginated leave requests
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/PaginatedResponse'
+              - type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/LeaveRequest' } }
+    BalanceResponse:
+      description: Leave balance
+      content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/LeaveBalance' } } } } }
+    DecisionResponse:
+      description: Leave decision and optional updated balance
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                properties:
+                  leave_request: { $ref: '#/components/schemas/LeaveRequest' }
+                  leave_balance: { $ref: '#/components/schemas/LeaveBalance' }
+    AttendanceResponse:
+      description: Attendance record
+      content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/AttendanceRecord' } } } } }
+    AttendanceListResponse:
+      description: Paginated attendance records
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/PaginatedResponse'
+              - type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/AttendanceRecord' } }
+    Unauthorized:
+      description: Authentication is missing or invalid
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: Authenticated identity lacks permission
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: Resource not found
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: Request conflicts with current state or data
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ValidationError:
+      description: Request validation failed
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+security:
+  - bearerAuth: []

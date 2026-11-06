@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS departments;
+DROP EXTENSION IF EXISTS pgcrypto;
+
