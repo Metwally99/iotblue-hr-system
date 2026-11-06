@@ -2,6 +2,8 @@
 
 A full-stack HR application developed around employee records, departments, leave requests, attendance, and reporting.
 
+![bluePeople HR management system overview](docs/images/bluepeople-overview.png)
+
 ## Architecture
 
 The Go API uses a handler → service → repository structure with PostgreSQL and versioned migrations. A TypeScript frontend provides administrator and employee workflows.
@@ -12,6 +14,20 @@ The Go API uses a handler → service → repository structure with PostgreSQL a
 - Employee and department management.
 - Leave requests, approval workflows, and attendance tracking.
 - Filterable lists, reporting, and an OpenAPI contract.
+
+## Product gallery
+
+### Leave and attendance
+
+![Leave management and attendance tracking workflows](docs/images/hr-workflows.png)
+
+### Workforce calendar
+
+![Workforce calendar and leave request form](docs/images/workforce-calendar.png)
+
+### Access and daily brief
+
+![Role-based access and daily brief dashboard](docs/images/access-and-dashboard.png)
 
 ## Run locally
 
